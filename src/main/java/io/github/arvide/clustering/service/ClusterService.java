@@ -19,11 +19,19 @@ public class ClusterService {
         this.dataLoader = dataLoader;
     }
 
+    /**
+     * Creates clusters of related blogs using K-means clustering with Pearson
+     * similarity.
+     * 
+     * @param k          - How many clusters to create.
+     * @param iterations - How many times the clustering should run.
+     * @return - Map with clusters of related blogs.
+     */
     public Map<Centroid, List<Blog>> cluster(int k, int iterations) {
         List<Blog> blogs = this.dataLoader.getBlogs();
         List<String> words = this.dataLoader.getWords();
 
-        // 1. Create K clusters with centroids with random word counts
+        // 1. Create K starting clusters.
         for (int i = 0; i < k; i++) {
             Centroid centroid = new Centroid(blogs.get(i).wordCounts());
             clusters.put(centroid, new ArrayList<>());
@@ -83,9 +91,9 @@ public class ClusterService {
 
         for (Map.Entry<Centroid, List<Blog>> cluster : clusters.entrySet()) {
             // Get the total word counts for every word
-            int[] totalWordCounts = new int[words.size() - 1];
+            int[] totalWordCounts = new int[words.size()];
             for (Blog blog : cluster.getValue()) {
-                for (int i = 0; i < blog.wordCounts().size() - 1; i++) {
+                for (int i = 0; i < blog.wordCounts().size(); i++) {
                     totalWordCounts[i] += blog.wordCounts().get(i);
                 }
             }
@@ -103,8 +111,43 @@ public class ClusterService {
         clusters = movedClusters;
     }
 
-    // Placeholder
+    /**
+     * Calculates a similarity scores between the word counts of a blog vs the
+     * average word counts in a centroid.
+     * 
+     * @param blogWordCounts
+     * @param centroidWordCounts
+     * @return - Similarity score.
+     */
     public double pearson(List<Integer> blogWordCounts, List<Integer> centroidWordCounts) {
-        return 0.5;
+        int sumBlog = 0;
+        for (Integer count : blogWordCounts) {
+            sumBlog += count;
+        }
+        double meanBlog = sumBlog / blogWordCounts.size();
+
+        int sumCentroid = 0;
+        for (Integer count : centroidWordCounts) {
+            sumCentroid += count;
+        }
+        double meanCentroid = sumCentroid / centroidWordCounts.size();
+
+        double numerator = 0;
+        double sumSqBlog = 0;
+        double sumSqCentroid = 0;
+
+        for (int i = 0; i < blogWordCounts.size(); i++) {
+            double diffBlog = blogWordCounts.get(i) - meanBlog;
+            double diffCentroid = centroidWordCounts.get(i) - meanCentroid;
+            numerator += diffBlog * diffCentroid;
+            sumSqBlog += diffBlog * diffBlog;
+            sumSqCentroid += diffCentroid * diffCentroid;
+        }
+
+        double denominator = Math.sqrt(sumSqBlog) * Math.sqrt(sumSqCentroid);
+        if (denominator == 0) {
+            return 0;
+        }
+        return numerator / denominator;
     }
 }
