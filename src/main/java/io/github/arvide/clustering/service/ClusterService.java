@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
+import io.github.arvide.clustering.dto.Cluster;
 import io.github.arvide.clustering.entity.Blog;
 import io.github.arvide.clustering.entity.Centroid;
 
@@ -27,7 +28,7 @@ public class ClusterService {
      * @param iterations - How many times the clustering should run.
      * @return - Map with clusters of related blogs.
      */
-    public Map<Centroid, List<Blog>> cluster(int k, int iterations) {
+    public List<Cluster> cluster(int k, int iterations) {
         List<Blog> blogs = this.dataLoader.getBlogs();
         List<String> words = this.dataLoader.getWords();
 
@@ -49,7 +50,8 @@ public class ClusterService {
 
         List<Centroid> centroids = new ArrayList<>(clusters.keySet());
         findClosestClusterForEveryBlog(blogs, centroids);
-        return clusters;
+
+        return presentData(clusters);
 
     }
 
@@ -149,5 +151,30 @@ public class ClusterService {
             return 0;
         }
         return numerator / denominator;
+    }
+
+    /**
+     * Converts the raw cluster data into presentable data in a list of clusters.
+     * 
+     * @param rawClusters - Raw cluster data.
+     * @return - List of clusters and their blogs.
+     */
+    public List<Cluster> presentData(Map<Centroid, List<Blog>> rawClusters) {
+        List<Cluster> clusters = new ArrayList<>();
+
+        int n = 1;
+        for (Map.Entry<Centroid, List<Blog>> entry : rawClusters.entrySet()) {
+            String name = "Cluster " + n;
+            List<String> blogNames = new ArrayList<>();
+
+            for (Blog blog : entry.getValue()) {
+                blogNames.add(blog.name());
+            }
+
+            clusters.add(new Cluster(name, blogNames));
+            n++;
+        }
+
+        return clusters;
     }
 }
