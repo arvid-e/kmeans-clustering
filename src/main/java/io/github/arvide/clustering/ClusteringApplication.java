@@ -6,8 +6,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class ClusteringApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(ClusteringApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(ClusteringApplication.class, args);
+    }
 
 }
