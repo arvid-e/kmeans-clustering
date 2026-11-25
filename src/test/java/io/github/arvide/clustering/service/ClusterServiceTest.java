@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import io.github.arvide.clustering.dto.Cluster;
 import io.github.arvide.clustering.entity.Blog;
 import io.github.arvide.clustering.entity.Centroid;
 
@@ -25,15 +26,15 @@ public class ClusterServiceTest {
         // Arrange
 
         // Act
-        Map<Centroid, List<Blog>> clusters = clusterService.cluster(5, 4);
+        List<Cluster> clusters = clusterService.cluster(5, 4);
         System.out.println("Test run");
-        for (Map.Entry<Centroid, List<Blog>> entry : clusters.entrySet()) {
+        for (Cluster cluster : clusters) {
             System.out.println("CENTROID");
-            for (Blog blog : entry.getValue()) {
-                System.out.println(" " + blog.name());
+            for (String blog : cluster.blogs()) {
+                System.out.println(" " + blog);
             }
         }
         // Assert
-        assertEquals(5, clusters.entrySet().size());
+        assertEquals(5, clusters.size());
     }
 }
