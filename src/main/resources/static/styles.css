@@ -1,0 +1,57 @@
+ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 10px;
+}
+
+li {
+  position: relative;
+  padding-left: 16px;
+  line-height: 1.6;
+  border-left: 1px solid transparent;
+}
+
+li:not(:last-child) {
+  border-left-color: #999;
+}
+
+li::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 0;
+  width: 12px;
+  height: 0.8em;
+  border-left: 1px solid #999;
+  border-bottom: 1px solid #999;
+}
+
+summary {
+  list-style: none;
+  cursor: pointer;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Folder */
+summary::before {
+  content: '';
+  display: inline-block;
+  width: 20px;
+  height: 15px;
+  margin-right: 8px;
+  background: #ef9f27;
+  clip-path: polygon(0 0, 40% 0, 50% 18%, 100% 18%, 100% 100%, 0 100%);
+}
+
+/* Document */
+li:not(:has(details))::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 15px;
+  margin-right: 8px;
+  background: #b4b2a9;
+  clip-path: polygon(0 0, 65% 0, 100% 30%, 100% 100%, 0 100%);
+}
