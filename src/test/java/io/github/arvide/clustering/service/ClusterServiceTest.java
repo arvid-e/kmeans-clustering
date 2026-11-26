@@ -22,13 +22,6 @@ public class ClusterServiceTest {
         // Act
         List<Cluster> clusters = clusterService.cluster(5, 4);
 
-        for (Cluster cluster : clusters) {
-            System.out.println("CENTROID");
-            for (String blog : cluster.blogs()) {
-                System.out.println(" " + blog);
-            }
-        }
-
         // Assert
         assertEquals(5, clusters.size());
 
