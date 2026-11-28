@@ -1,20 +1,18 @@
 package io.github.arvide.clustering.service;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
 import io.github.arvide.clustering.dto.Cluster;
 import io.github.arvide.clustering.entity.Blog;
-import io.github.arvide.clustering.entity.Centroid;
+import io.github.arvide.clustering.entity.ClusterState;
 
 @Service
 public class ClusterService {
     DataLoader dataLoader;
-    Map<Centroid, List<Blog>> clusters = new HashMap<>();
 
     public ClusterService(DataLoader dataLoader) {
         this.dataLoader = dataLoader;
@@ -28,28 +26,28 @@ public class ClusterService {
      * @param iterations - How many times the clustering should run.
      * @return - Map with clusters of related blogs.
      */
-    public List<Cluster> cluster(int k, int iterations) {
+    public List<Cluster> cluster(int k, int maxIterations) {
         List<Blog> blogs = this.dataLoader.getBlogs();
-        List<String> words = this.dataLoader.getWords();
+        List<ClusterState> clusters = new ArrayList<>();
 
-        // 1. Create K starting clusters.
+        // Create K starting clusters.
         for (int i = 0; i < k; i++) {
-            Centroid centroid = new Centroid(blogs.get(i).wordCounts());
-            clusters.put(centroid, new ArrayList<>());
+            List<Double> centroid = blogs.get(i).wordCounts();
+            clusters.add(new ClusterState(centroid, new ArrayList<>(), new ArrayList<>()));
         }
 
-        for (int i = 0; i < iterations; i++) {
-            List<Centroid> centroids = new ArrayList<>(clusters.keySet());
-            // 2. Add the blogs to the cluster with the most similar centroid
-            findClosestClusterForEveryBlog(blogs, centroids);
-
-            // 3. Centre all centroid by calculating the average word count for every blog
-            // in the clusters
-            centreCentroids(words);
+        int iteration = 0;
+        boolean changed = true;
+        while (changed && iteration < maxIterations) {
+            for (ClusterState cluster : clusters) {
+                cluster.setPreviousAssignments(cluster.getAssignments());
+                cluster.setAssignments(new ArrayList<>());
+            }
+            clusters = assignBlogsToClusters(blogs, clusters);
+            changed = clusters.stream().anyMatch(ClusterState::assignmentsChanged);
+            clusters = recenter(clusters);
+            iteration++;
         }
-
-        List<Centroid> centroids = new ArrayList<>(clusters.keySet());
-        findClosestClusterForEveryBlog(blogs, centroids);
 
         return presentData(clusters);
 
@@ -63,22 +61,23 @@ public class ClusterService {
      * @param blogs
      * @param centroids
      */
-    public void findClosestClusterForEveryBlog(List<Blog> blogs, List<Centroid> centroids) {
+    public List<ClusterState> assignBlogsToClusters(List<Blog> blogs, List<ClusterState> clusters) {
         for (Blog blog : blogs) {
-            Centroid closest = new Centroid(new ArrayList<>());
-            double highestSimilarity = 0;
+            ClusterState closest = clusters.get(0);
+            double highestSimilarity = Double.NEGATIVE_INFINITY;
 
-            for (Centroid centroid : centroids) {
-                double similarity = pearson(blog.wordCounts(), centroid.averageWordCounts());
+            for (ClusterState cluster : clusters) {
+                double similarity = pearson(blog.wordCounts(), cluster.getCentroid());
                 if (similarity > highestSimilarity) {
-                    closest = centroid;
+                    closest = cluster;
                     highestSimilarity = similarity;
                 }
             }
 
-            clusters.putIfAbsent(closest, new ArrayList<>());
-            clusters.get(closest).add(blog);
+            closest.assignBlog(blog);
         }
+
+        return clusters;
     }
 
     /**
@@ -88,29 +87,35 @@ public class ClusterService {
      * @param words
      * @param amountOfBlogs
      */
-    public void centreCentroids(List<String> words) {
-        Map<Centroid, List<Blog>> movedClusters = new HashMap<>();
+    public List<ClusterState> recenter(List<ClusterState> clusters) {
+        List<String> words = this.dataLoader.getWords();
+        List<ClusterState> centeredClusters = new ArrayList<>();
 
-        for (Map.Entry<Centroid, List<Blog>> cluster : clusters.entrySet()) {
-            // Get the total word counts for every word
-            int[] totalWordCounts = new int[words.size()];
-            for (Blog blog : cluster.getValue()) {
+        for (ClusterState cluster : clusters) {
+            List<Double> totalWordCounts = new ArrayList<>(Collections.nCopies(words.size(), 0.0));
+
+            // get total word counts for all clusters
+            for (Blog blog : cluster.getAssignments()) {
                 for (int i = 0; i < blog.wordCounts().size(); i++) {
-                    totalWordCounts[i] += blog.wordCounts().get(i);
+                    Double currentSum = totalWordCounts.get(i);
+                    totalWordCounts.set(i, currentSum + blog.wordCounts().get(i));
                 }
             }
 
-            // Get the average word count for every word
-            List<Integer> averageWordCounts = new ArrayList<>();
-            for (int count : totalWordCounts) {
-                int average = cluster.getValue().size() == 0 ? 0 : count / cluster.getValue().size();
+            // get average word count for all clusters
+            List<Double> averageWordCounts = new ArrayList<>();
+            for (Double count : totalWordCounts) {
+                Double average = cluster.getAssignments().size() == 0 ? 0 : count / cluster.getAssignments().size();
                 averageWordCounts.add(average);
             }
 
-            Centroid centered = new Centroid(averageWordCounts);
-            movedClusters.put(centered, new ArrayList<>());
+            ClusterState centered = new ClusterState(averageWordCounts, cluster.getAssignments(),
+                    cluster.getPreviousAssignments());
+            centeredClusters.add(centered);
+
         }
-        clusters = movedClusters;
+
+        return centeredClusters;
     }
 
     /**
@@ -121,15 +126,15 @@ public class ClusterService {
      * @param centroidWordCounts
      * @return - Similarity score.
      */
-    public double pearson(List<Integer> blogWordCounts, List<Integer> centroidWordCounts) {
-        int sumBlog = 0;
-        for (Integer count : blogWordCounts) {
+    public double pearson(List<Double> blogWordCounts, List<Double> centroidWordCounts) {
+        double sumBlog = 0;
+        for (Double count : blogWordCounts) {
             sumBlog += count;
         }
         double meanBlog = sumBlog / blogWordCounts.size();
 
-        int sumCentroid = 0;
-        for (Integer count : centroidWordCounts) {
+        double sumCentroid = 0;
+        for (Double count : centroidWordCounts) {
             sumCentroid += count;
         }
         double meanCentroid = sumCentroid / centroidWordCounts.size();
@@ -159,15 +164,15 @@ public class ClusterService {
      * @param rawClusters - Raw cluster data.
      * @return - List of clusters and their blogs.
      */
-    public List<Cluster> presentData(Map<Centroid, List<Blog>> rawClusters) {
+    public List<Cluster> presentData(List<ClusterState> clusterStates) {
         List<Cluster> clusters = new ArrayList<>();
 
         int n = 1;
-        for (Map.Entry<Centroid, List<Blog>> entry : rawClusters.entrySet()) {
+        for (ClusterState cluster : clusterStates) {
             String name = "Cluster " + n;
             List<String> blogNames = new ArrayList<>();
 
-            for (Blog blog : entry.getValue()) {
+            for (Blog blog : cluster.getAssignments()) {
                 blogNames.add(blog.name());
             }
 

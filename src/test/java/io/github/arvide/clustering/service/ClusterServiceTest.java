@@ -16,11 +16,11 @@ public class ClusterServiceTest {
     ClusterService clusterService;
 
     @Test
-    public void clusteringRuns() {
+    public void correctNumberOfClustersAreCreated() {
         // Arrange
 
         // Act
-        List<Cluster> clusters = clusterService.cluster(5, 4);
+        List<Cluster> clusters = clusterService.cluster(5, 100);
 
         // Assert
         assertEquals(5, clusters.size());

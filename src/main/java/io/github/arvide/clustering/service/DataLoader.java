@@ -28,10 +28,10 @@ public class DataLoader {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] columns = line.split("\t");
-                List<Integer> wordCounts = new ArrayList<>();
+                List<Double> wordCounts = new ArrayList<>();
 
                 for (int i = 1; i < columns.length; i++) {
-                    wordCounts.add(Integer.valueOf(columns[i]));
+                    wordCounts.add(Double.valueOf(columns[i]));
                 }
                 
                 blogs.add(new Blog(columns[0], wordCounts));
