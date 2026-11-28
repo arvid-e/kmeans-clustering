@@ -20,8 +20,9 @@ public class ClusterController {
     }
 
     @GetMapping("")
-    public List<Cluster> getClusters(@RequestParam(defaultValue = "6") int k) {
-        return clusterService.cluster(Integer.valueOf(k), 5);
+    public List<Cluster> getClusters(@RequestParam(defaultValue = "6") int numberOfClusters,
+            @RequestParam(defaultValue = "100") int maxIterations) {
+        return clusterService.cluster(Integer.valueOf(numberOfClusters), Integer.valueOf(maxIterations));
 
     }
 }

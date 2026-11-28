@@ -2,7 +2,13 @@ const endpoint = '/api/v1/clusters';
 const clusters = document.getElementById('clusters');
 
 async function fetchClusters() {
-  const res = await fetch(`${endpoint}`);
+  const numberOfClusters = 7
+  maxIterations = 50
+  const params = new URLSearchParams({
+    numberOfClusters,
+    maxIterations
+  })
+  const res = await fetch(`${endpoint}?${params}`);
   return await res.json();
 }
 

@@ -26,12 +26,12 @@ public class ClusterService {
      * @param iterations - How many times the clustering should run.
      * @return - Map with clusters of related blogs.
      */
-    public List<Cluster> cluster(int k, int maxIterations) {
+    public List<Cluster> cluster(int numberOfClusters, int maxIterations) {
         List<Blog> blogs = this.dataLoader.getBlogs();
         List<ClusterState> clusters = new ArrayList<>();
 
         // Create K starting clusters.
-        for (int i = 0; i < k; i++) {
+        for (int i = 0; i < numberOfClusters; i++) {
             List<Double> centroid = blogs.get(i).wordCounts();
             clusters.add(new ClusterState(centroid, new ArrayList<>(), new ArrayList<>()));
         }
